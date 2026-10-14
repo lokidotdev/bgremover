@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BG Remover Admin</title>
+  <link rel="stylesheet" href="/admin/static/style.css">
+</head>
+<body>
+  <!-- Login -->
+  <main id="login" class="login" hidden>
+    <form id="login-form" class="card login-card">
+      <div class="brand"><span class="logo"></span>BG Remover</div>
+      <h1>Admin sign in</h1>
+      <label>Password
+        <input id="password" type="password" autocomplete="current-password" required autofocus>
+      </label>
+      <p id="login-error" class="error" hidden></p>
+      <button class="btn primary" type="submit">Sign in</button>
+    </form>
+  </main>
+
+  <!-- App -->
+  <div id="app" class="shell" hidden>
+    <nav class="sidebar">
+      <div class="brand"><span class="logo"></span>BG Remover</div>
+      <a href="#overview" data-view="overview">Overview</a>
+      <a href="#domains" data-view="domains">Allowed domains</a>
+      <a href="#playground" data-view="playground">Playground</a>
+      <a href="#api" data-view="api">API usage</a>
+      <div class="sidebar-foot">
+        <span id="device" class="pill"></span>
+        <button id="logout" class="btn ghost small">Sign out</button>
+      </div>
+    </nav>
+
+    <section class="content">
+      <!-- Overview -->
+      <div class="view" data-view="overview">
+        <header><h2>Overview</h2><p class="muted">Last 7 days</p></header>
+        <div class="stats">
+          <div class="card stat"><span>Requests</span><strong id="s-requests">–</strong></div>
+          <div class="card stat"><span>Succeeded</span><strong id="s-succeeded">–</strong></div>
+          <div class="card stat"><span>Blocked</span><strong id="s-blocked">–</strong></div>
+          <div class="card stat"><span>Avg. time</span><strong id="s-avg">–</strong></div>
+        </div>
+        <div class="card">
+          <h3>Requests per day</h3>
+          <div id="chart" class="chart"></div>
+          <div class="legend"><span class="sw ok"></span>Succeeded <span class="sw bad"></span>Blocked / failed</div>
+        </div>
+        <div class="card">
+          <h3>Callers</h3>
+          <table class="table">
+            <thead><tr><th>Host</th><th>Requests</th><th>Succeeded</th><th>Blocked</th><th>Last seen</th><th></th></tr></thead>
+            <tbody id="hosts"></tbody>
+          </table>
+          <p id="hosts-empty" class="muted empty" hidden>No requests yet.</p>
+        </div>
+      </div>
+
+      <!-- Domains -->
+      <div class="view" data-view="domains">
+        <header>
+          <h2>Allowed domains</h2>
+          <p class="muted">Only websites on this list can call <code>/v1/remove</code> from the browser.
+            <code>example.com</code> matches that host exactly; <code>*.example.com</code> matches its subdomains.</p>
+        </header>
+        <form id="add-form" class="card add-form">
+          <input id="pattern" placeholder="example.com or *.example.com" required>
+          <input id="note" placeholder="Note (optional)">
+          <button class="btn primary" type="submit">Add domain</button>
+        </form>
+        <p id="add-error" class="error" hidden></p>
+        <div class="card">
+          <table class="table">
+            <thead><tr><th>Domain</th><th>Note</th><th>Added</th><th>Enabled</th><th></th></tr></thead>
+            <tbody id="rules"></tbody>
+          </table>
+          <p id="rules-empty" class="muted empty" hidden>No domains yet: every browser request is currently blocked.</p>
+        </div>
+        <div class="card row">
+          <div>
+            <h3>Allow requests without an Origin</h3>
+            <p class="muted">Lets curl, mobile apps and server-to-server calls through. These clients can send any
+              headers they like, so turning this on effectively makes the API public.</p>
+          </div>
+          <label class="switch"><input id="allow-no-origin" type="checkbox"><span></span></label>
+        </div>
+      </div>
+
+      <!-- Playground -->
+      <div class="view" data-view="playground">
+        <header><h2>Playground</h2><p class="muted">Try the model. Bypasses the domain list and isn't counted in stats.</p></header>
+        <div class="card">
+          <div class="options">
+            <label>Format
+              <select id="opt-format"><option>png</option><option>webp</option><option>jpg</option><option>mask</option></select>
+            </label>
+            <label>Background
+              <span class="inline"><input id="opt-bg-on" type="checkbox"><input id="opt-bg" type="color" value="#ffffff"></span>
+            </label>
+            <label class="check"><input id="opt-crop" type="checkbox"> Crop to subject</label>
+            <label class="check"><input id="opt-refine" type="checkbox" checked> Refine edges</label>
+          </div>
+          <label id="drop" class="drop">
+            <input id="file" type="file" accept="image/*" hidden>
+            <span>Drop an image here or <u>browse</u></span>
+          </label>
+          <div id="result" class="result" hidden>
+            <figure><img id="before" alt="Original"><figcaption>Original</figcaption></figure>
+            <figure class="checker"><img id="after" alt="Result"><figcaption id="after-cap">Result</figcaption></figure>
+          </div>
+          <div class="row end"><a id="download" class="btn" hidden download>Download</a></div>
+        </div>
+      </div>
+
+      <!-- API -->
+      <div class="view" data-view="api">
+        <header><h2>API usage</h2><p class="muted">Interactive reference at <a href="/docs" target="_blank">/docs</a>.</p></header>
+        <div class="card">
+          <h3>From a website on the allow-list</h3>
+<pre><code>const form = new FormData();
+form.append("image", fileInput.files[0]);
+form.append("format", "png");          // png | webp | jpg | mask
+// form.append("background", "#ffffff"); // optional solid background
+// form.append("crop", "true");          // optional: trim to subject
+
+const res = await fetch("<span class="origin"></span>/v1/remove", { method: "POST", body: form });
+if (!res.ok) throw new Error((await res.json()).error);
+const blob = await res.blob();           // the cutout
+</code></pre>
+          <h3>curl (needs "Allow requests without an Origin")</h3>
+<pre><code>curl -F image=@photo.jpg "<span class="origin"></span>/v1/remove?format=png" -o cutout.png</code></pre>
+          <h3>Errors</h3>
+          <table class="table">
+            <tbody>
+              <tr><td><code>403</code></td><td>Caller's domain isn't allowed</td></tr>
+              <tr><td><code>413</code></td><td>Upload too large</td></tr>
+              <tr><td><code>422</code></td><td>Not a readable image, too many megapixels, or a bad option</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/admin/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+models/
+data/
+.env
+*.onnx
+.pytest_cache/
+.claude/settings.local.json

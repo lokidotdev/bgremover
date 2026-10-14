@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bgremover",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "python", "-m", "bgremover.main"],
+      "port": 8000
+    }
+  ]
+}
